@@ -1,0 +1,20 @@
+# Build directories
+cmake-build-*/
+build/
+
+# Test output
+test_output/
+
+# IDE
+.idea/
+*.swp
+
+# Compiled
+*.o
+*.a
+*.exe
+*.dll
+*.so
+*.dylib
+# Generated from idl/schema.idl
+libs/messages/include/

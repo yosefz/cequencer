@@ -1,0 +1,163 @@
+# Schema definition for trading messages
+#
+# VERSIONING:
+#   - Add 'version N' at top of file to set schema version
+#   - Use '@sinceVersion(N)' decorator before messages/fields added in version N
+#   - Fields are additive only - never remove or modify existing fields
+#   - Each message encodes its VERSION, decoder checks before reading new fields
+#
+# TYPE IDs:
+#   - Every message MUST have '@typeId(N)' decorator
+#   - TYPE_ID is used for dispatching (4 bytes prepended to wire format)
+#   - Once assigned, TYPE_ID should never change
+#
+# Format:
+#   @typeId(N)
+#   message/event/command MessageName
+#       type fieldName
+#
+#   enum EnumName
+#       VALUE_ONE
+#       VALUE_TWO
+#
+#   object ObjectName
+#       type fieldName
+#
+# Types:
+#   int8, int16, int32, int64 (signed integers)
+#   uint8, uint16, uint32, uint64 (unsigned integers)
+#   float32, float64 (floating point)
+#   string(N) (fixed-length string, N bytes)
+#   EnumName (reference to enum)
+#   ObjectName (reference to object)
+#   list(T, N) (fixed-capacity list of T, max N elements)
+#
+# Base Fields (automatically added):
+#   messageVersion (uint16) - schema version when encoded
+#   sequenceNumber (uint64)
+#   msgSender (string(32))
+#   sendingTimestamp (uint64)
+
+version 1
+
+# ============================================================================
+# Enums
+# ============================================================================
+
+enum Side
+    BUY
+    SELL
+
+enum OrderType
+    MARKET
+    LIMIT
+    STOP
+    STOP_LIMIT
+
+enum OrderStatus
+    NEW
+    PARTIALLY_FILLED
+    FILLED
+    CANCELLED
+    REJECTED
+
+enum TimeInForce
+    DAY
+    GTC
+    IOC
+    FOK
+
+# ============================================================================
+# Objects (embedded structs)
+# ============================================================================
+
+object PriceLevel
+    float64 price
+    uint64 quantity
+    uint32 orderCount
+
+# ============================================================================
+# Commands (requests/actions) - typically low frequency, outline is fine
+# ============================================================================
+
+@typeId(1)
+command NewOrderSingle [outline]
+    string(16) clOrdId
+    string(8) symbol
+    Side side
+    OrderType orderType
+    float64 price
+    uint64 quantity
+    TimeInForce timeInForce
+
+@typeId(2)
+command CancelOrder [outline]
+    string(16) clOrdId
+    string(16) origClOrdId
+    string(8) symbol
+
+@typeId(3)
+command ModifyOrder [outline]
+    string(16) clOrdId
+    string(16) origClOrdId
+    string(8) symbol
+    float64 newPrice
+    uint64 newQuantity
+
+# ============================================================================
+# Events (notifications/updates) - high frequency, keep inline
+# ============================================================================
+
+# System events published by the sequencer
+@typeId(4)
+event StartOfSession
+    uint32 version
+    string(32) sessionId
+    string(64) sequencerVersion
+
+@typeId(5)
+event Time
+    uint64 timestamp
+
+@typeId(6)
+event EndOfSession
+    uint32 version
+    string(32) sessionId
+    uint64 eventCount
+    string(64) reason
+
+@typeId(7)
+event ExecutionReport
+    string(16) clOrdId
+    string(16) orderId
+    string(8) symbol
+    Side side
+    OrderStatus status
+    float64 avgPrice
+    uint64 cumQuantity
+    uint64 leavesQuantity
+    string(32) text
+
+@typeId(8)
+event MarketData
+    string(8) symbol
+    uint64 timestamp
+    list(PriceLevel, 10) bids
+    list(PriceLevel, 10) asks
+
+@typeId(9)
+event Trade
+    string(8) symbol
+    float64 price
+    uint64 quantity
+    Side aggressor
+    uint64 tradeId
+
+@typeId(10)
+event MDBar
+    string(8) symbol
+    int64 open
+    int64 high
+    int64 low
+    int64 close
+    int64 volume
